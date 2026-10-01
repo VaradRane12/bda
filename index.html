@@ -1,0 +1,581 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Journey of a Collision</title>
+<meta name="description" content="An interactive 3D journey through CERN's data: how collisions and accelerator signals are collected, filtered, stored on EOS and Hadoop (HDFS, YARN, HBase), processed on the grid and turned into discoveries.">
+<style>
+  :root{--paper:#f3f1ea;--ink:#1f2a44;--mut:#6b7280;--card:#ffffff;--edge:#e3ded2;
+    --c1:#0284c7;--c2:#16a34a;--c3:#4f46e5;--c4:#d97706;--c5:#7c3aed;--pink:#db2777;--red:#dc2626}
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--paper);color:var(--ink);font:15px/1.5 -apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;overflow:hidden}
+  #scene{position:fixed;inset:0}
+  #scene canvas{display:block;width:100%;height:100%}
+  .title{position:fixed;top:20px;left:24px;z-index:3;max-width:440px;pointer-events:none}
+  .title small{display:block;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--mut);font-weight:600}
+  .title h1{margin:4px 0 2px;font:700 34px/1.1 "Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif}
+  .title p{margin:0;color:var(--mut);font-size:14px}
+  .tools{position:fixed;top:20px;right:24px;z-index:3;display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+  .pill{font:600 13px -apple-system,"Segoe UI",Roboto,sans-serif;background:var(--card);color:var(--ink);border:1px solid var(--edge);border-radius:999px;padding:9px 16px;cursor:pointer;text-decoration:none;box-shadow:0 2px 8px rgba(31,42,68,.06)}
+  .pill:hover{border-color:var(--ink)} .pill.dark{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .story{position:fixed;top:92px;right:24px;width:360px;z-index:3;background:var(--card);border-radius:20px;box-shadow:0 12px 40px rgba(31,42,68,.14);padding:18px 20px;max-height:calc(100vh - 196px);overflow:auto}
+  .story .num{font:700 13px -apple-system,sans-serif;letter-spacing:.12em;color:var(--cc)}
+  .story h2{margin:2px 0 8px;font:700 26px/1.15 "Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif}
+  .story p{margin:0 0 12px;font-size:14.5px;color:#374151}
+  .story h4{margin:14px 0 6px;font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--mut)}
+  .tags{display:flex;flex-wrap:wrap;gap:6px}
+  .tags span{font-size:12.5px;font-weight:600;border-radius:8px;padding:3px 9px;background:color-mix(in srgb,var(--cc) 12%,white);color:color-mix(in srgb,var(--cc) 80%,black)}
+  .stats{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .stats div{background:var(--paper);border-radius:12px;padding:8px 10px}
+  .stats b{display:block;font-size:19px;font-variant-numeric:tabular-nums}
+  .stats span{font-size:12px;color:var(--mut)}
+  .stats .real{background:color-mix(in srgb,var(--cc) 10%,white)}
+  .try{margin-top:12px;font-size:13.5px;background:#fff8e6;border:1px dashed #e9c46a;border-radius:12px;padding:8px 12px}
+  .try b{color:#a16207}
+  .story input[type=range]{width:100%;accent-color:var(--cc)}
+  .note{font-size:11.5px;color:var(--mut);margin-top:8px}
+  .timeline{position:fixed;left:24px;right:24px;bottom:20px;z-index:3;display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+  .ch{position:relative;background:var(--card);border:1px solid var(--edge);border-radius:16px;padding:10px 14px 12px;cursor:pointer;text-align:left;font:inherit;color:inherit;overflow:hidden;transition:transform .15s,box-shadow .2s}
+  .ch:hover{transform:translateY(-2px)}
+  .ch .n{font:700 22px/1 "Iowan Old Style",Palatino,Georgia,serif;color:var(--cc)}
+  .ch .t{font-weight:700;font-size:14px;margin-left:6px}
+  .ch .s{display:block;font-size:12px;color:var(--mut);margin-top:3px}
+  .ch.on{border-color:var(--cc);box-shadow:0 8px 24px color-mix(in srgb,var(--cc) 25%,transparent)}
+  .ch .bar{position:absolute;left:0;bottom:0;height:4px;width:0;background:var(--cc)}
+  .ch.on .bar{width:100%}
+  .ch.run .bar{animation:fill 8.5s linear forwards}
+  @keyframes fill{from{width:0}to{width:100%}}
+  #pop{position:fixed;z-index:5;max-width:300px;background:var(--card);border-radius:16px;box-shadow:0 12px 36px rgba(31,42,68,.2);padding:14px 16px;display:none;border:1px solid var(--edge)}
+  #pop h3{margin:0 0 4px;font:700 18px "Iowan Old Style",Palatino,Georgia,serif;padding-right:16px}
+  #pop p{margin:0;font-size:13.5px;color:#374151}
+  #pop .st{margin-top:8px;font-size:13px;font-weight:700}
+  #pop .x{position:absolute;top:8px;right:12px;cursor:pointer;color:var(--mut);font-size:18px;border:0;background:none}
+  .key{position:fixed;left:24px;bottom:118px;z-index:3;background:rgba(255,255,255,.85);border-radius:12px;padding:8px 12px;font-size:12px;color:#374151;display:grid;gap:3px}
+  .key i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:0}
+  #msg{position:fixed;inset:0;display:grid;place-items:center;color:var(--mut);z-index:2;text-align:center;padding:20px}
+  @media (max-width:900px){
+    html,body{overflow:auto;height:auto}
+    body{display:flex;flex-direction:column}
+    #scene{position:relative;height:58vh;order:3}
+    .title{position:relative;top:auto;left:auto;padding:16px 16px 6px;max-width:none;order:1}
+    .title h1{font-size:26px}
+    .tools{position:relative;top:auto;right:auto;justify-content:flex-start;padding:0 16px 10px;order:2}
+    .timeline{position:relative;left:auto;right:auto;bottom:auto;display:flex;overflow-x:auto;padding:10px 16px 8px;gap:8px;order:4}
+    .ch{min-width:150px}
+    .story{position:relative;top:auto;right:auto;width:auto;margin:8px 16px;max-height:none;order:5}
+    .key{position:relative;left:auto;bottom:auto;margin:8px 16px 20px;order:6}
+  }
+</style>
+</head>
+<body>
+<div id="scene"><div id="msg">Building the scene…</div></div>
+
+<div class="title">
+  <small>CERN · Big Data case study</small>
+  <h1>The journey of a collision</h1>
+  <p>Follow CERN's data from a proton collision to a discovery, one chapter at a time.</p>
+</div>
+
+<div class="tools">
+  <a class="pill" href="index.html">← Case study</a>
+  <button class="pill dark" id="guide">▶ Guide me</button>
+  <button class="pill" id="pause">Pause</button>
+  <button class="pill" id="lbl">Hide labels</button>
+</div>
+
+<aside class="story" id="story"></aside>
+
+<nav class="timeline" id="timeline"></nav>
+
+<div class="key">
+  <div><i style="background:#0284c7"></i>Collision event</div>
+  <div><i style="background:#16a34a"></i>Kept by the trigger</div>
+  <div><i style="background:#dc2626"></i>Thrown away</div>
+  <div><i style="background:#db2777"></i>Accelerator sensor reading</div>
+  <div><i style="background:#d97706"></i>Analysis job</div>
+</div>
+
+<div id="pop"></div>
+
+<script src="masses.js"></script>
+<script>
+  setTimeout(function(){ if(!window.__journey){ var m=document.getElementById("msg"); if(m) m.innerHTML="The 3D scene couldn't start.<br>It needs an internet connection (three.js loads from jsDelivr) and a browser with WebGL."; } }, 15000);
+</script>
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}
+</script>
+<script type="module">
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+
+const $ = s => document.querySelector(s);
+const fmt = n => Math.round(n).toLocaleString("en-US");
+const V = (x, y, z) => new THREE.Vector3(x, y, z);
+const Y = V(0, 1, 0);
+const host = $("#scene");
+
+/* ---------- renderer & orthographic "diorama" camera ---------- */
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setClearColor(0xf3f1ea);
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+host.appendChild(renderer.domElement); $("#msg").remove();
+const scene = new THREE.Scene();
+const F = 34;
+const camera = new THREE.OrthographicCamera(-F, F, F / 2, -F / 2, -300, 500);
+const OFF = V(0, 30, 38);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true; controls.minZoom = 0.3; controls.maxZoom = 5;
+controls.minPolarAngle = 0.25; controls.maxPolarAngle = 1.25;
+controls.target.set(3, 0, 2); camera.position.copy(controls.target).add(OFF);
+function resize() {
+  const w = host.clientWidth, h = host.clientHeight, a = w / h;
+  renderer.setSize(w, h, false);
+  camera.left = -F * a / 2; camera.right = F * a / 2; camera.top = F / 2; camera.bottom = -F / 2; camera.updateProjectionMatrix();
+}
+new ResizeObserver(resize).observe(host); resize();
+
+scene.add(new THREE.HemisphereLight(0xffffff, 0xd9d2c0, 1.1));
+const sun = new THREE.DirectionalLight(0xffffff, 1.4);
+sun.position.set(-20, 40, 25); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, { left: -45, right: 45, top: 25, bottom: -25, near: 1, far: 120 });
+scene.add(sun);
+
+/* ---------- helpers ---------- */
+const pick = [];
+const clickable = (o, info) => { o.userData.info = info; pick.push(o); return o; };
+const mat = (color, extra = {}) => new THREE.MeshStandardMaterial(Object.assign({ color, roughness: 0.6, metalness: 0.08 }, extra));
+function add(mesh, x, y, z, shadow = true) { mesh.position.set(x, y, z); if (shadow) { mesh.castShadow = true; mesh.receiveShadow = true; } scene.add(mesh); return mesh; }
+const labels = new THREE.Group(); scene.add(labels);
+function label(text, color = "#1f2a44", size = 1, pos, big = false) {
+  const font = (big ? "700 46px " : "600 36px ") + '-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif';
+  const c = document.createElement("canvas"), m = c.getContext("2d"); m.font = font;
+  const W = Math.ceil(m.measureText(text).width) + (big ? 50 : 70), H = big ? 80 : 68;
+  c.width = W; c.height = H; const x = c.getContext("2d");
+  x.fillStyle = big ? color : "rgba(255,255,255,.95)";
+  x.beginPath(); x.roundRect ? x.roundRect(3, 3, W - 6, H - 6, H / 2 - 3) : x.rect(3, 3, W - 6, H - 6); x.fill();
+  if (!big) { x.lineWidth = 3; x.strokeStyle = color; x.stroke(); x.fillStyle = color; x.beginPath(); x.arc(30, H / 2, 8, 0, 7); x.fill(); }
+  x.font = font; x.textBaseline = "middle"; x.fillStyle = big ? "#ffffff" : "#1f2a44";
+  x.textAlign = big ? "center" : "left"; x.fillText(text, big ? W / 2 : 48, H / 2 + 2);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, depthTest: false, transparent: true }));
+  s.renderOrder = 10; const h = (big ? 1.5 : 1.05) * size; s.scale.set(W / H * h, h, 1); if (pos) s.position.copy(pos); labels.add(s); return s;
+}
+const COL = { c1: 0x0284c7, c2: 0x16a34a, c3: 0x4f46e5, c4: 0xd97706, c5: 0x7c3aed, pink: 0xdb2777, red: 0xdc2626 };
+
+/* ---------- ground, stations, lanes ---------- */
+const ground = add(new THREE.Mesh(new THREE.PlaneGeometry(110, 60), new THREE.MeshBasicMaterial({ color: 0xf6f3ec })), 3, 0, 2, false);
+ground.rotation.x = -Math.PI / 2;
+const shade = add(new THREE.Mesh(new THREE.PlaneGeometry(110, 60), new THREE.ShadowMaterial({ opacity: 0.16 })), 3, 0.03, 2, false);
+shade.rotation.x = -Math.PI / 2; shade.receiveShadow = true;
+const grid = new THREE.GridHelper(110, 55, 0xe2dccf, 0xe9e4d8); grid.position.set(3, 0.01, 2); scene.add(grid);
+function tile(x, z, w, d, color) {
+  const sh = new THREE.Shape(); const r = 1.6, X = -w / 2, Z = -d / 2;
+  sh.moveTo(X + r, Z); sh.lineTo(X + w - r, Z); sh.quadraticCurveTo(X + w, Z, X + w, Z + r); sh.lineTo(X + w, Z + d - r);
+  sh.quadraticCurveTo(X + w, Z + d, X + w - r, Z + d); sh.lineTo(X + r, Z + d); sh.quadraticCurveTo(X, Z + d, X, Z + d - r); sh.lineTo(X, Z + r); sh.quadraticCurveTo(X, Z, X + r, Z);
+  const m = new THREE.Mesh(new THREE.ShapeGeometry(sh), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.07 }));
+  m.rotation.x = -Math.PI / 2; m.position.set(x, 0.02, z); scene.add(m);
+  const line = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(sh.getPoints(12).map(p => V(p.x, 0, -p.y))), new THREE.LineBasicMaterial({ color }));
+  line.position.set(x, 0.04, z); scene.add(line);
+}
+const ST = { collect: -22, filter: -8, store: 4.5, process: 17.5, discover: 30 };
+tile(ST.collect, 1.5, 19, 21, COL.c1); tile(ST.filter, 2.5, 9, 21, COL.c2); tile(ST.store, 2.5, 14, 21, COL.c3); tile(ST.process, 1, 10, 14, COL.c4); tile(ST.discover, 2.5, 13, 21, COL.c5);
+label("01  COLLECT", "#0284c7", 1, V(ST.collect, 0.2, 13.4), true);
+label("02  FILTER", "#16a34a", 1, V(ST.filter, 0.2, 13.4), true);
+label("03  STORE", "#4f46e5", 1, V(ST.store, 0.2, 13.4), true);
+label("04  PROCESS", "#d97706", 1, V(ST.process, 0.2, 9.4), true);
+label("05  DISCOVER", "#7c3aed", 1, V(ST.discover, 0.2, 13.4), true);
+function lane(pts, color) {
+  const curve = new THREE.CatmullRomCurve3(pts.map(p => V(p[0], 0.06, p[1])));
+  scene.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 160, 0.12, 6, false), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.45 })));
+}
+lane([[-15, -2], [-8, -2], [1, -3], [12, -1], [17.5, 0], [24, -1], [27, -1]], COL.c1);
+lane([[-15, 7], [-11, 7], [-5, 7], [1, 7], [9, 7], [24, 7], [27, 7]], COL.pink);
+label("collision data", "#0284c7", 0.7, V(-4, 0.5, -3.6));
+label("accelerator logs", "#db2777", 0.7, V(-1.5, 0.5, 8.6));
+
+/* ---------- 01 COLLECT: LHC ring, detectors, sensors ---------- */
+const RC = V(ST.collect, 0, 0), R = 6.5;
+const ring = add(new THREE.Mesh(new THREE.TorusGeometry(R, 0.38, 16, 160), mat(COL.c1, { emissive: COL.c1, emissiveIntensity: 0.15 })), RC.x, 0.6, RC.z);
+ring.rotation.x = Math.PI / 2;
+clickable(ring, { t: "The Large Hadron Collider", p: "A 27 km ring under the French–Swiss border. Two proton beams race in opposite directions and cross at four points. Each crossing creates collisions, and that's where the data starts.", tags: ["Volume", "Velocity"] });
+label("LHC · 27 km ring", "#0284c7", 0.85, V(RC.x, 0.4, RC.z));
+const ringPos = (a, r = R) => V(RC.x + r * Math.sin(a), 0.6, RC.z + r * Math.cos(a));
+const DET = [["ATLAS", 0, 1.35], ["ALICE", Math.PI / 4, 1.0], ["CMS", Math.PI, 1.2], ["LHCb", -Math.PI / 4, 0.95]].map(([n, a, r]) => {
+  const p = ringPos(a), tan = V(Math.cos(a), 0, -Math.sin(a));
+  const m0 = mat(0xf59e0b, { emissive: 0xf59e0b, emissiveIntensity: 0.05 });
+  const m = add(new THREE.Mesh(new THREE.CylinderGeometry(r, r, 2.2, 28), m0), p.x, r * 0.9, p.z);
+  m.quaternion.setFromUnitVectors(Y, tan);
+  clickable(m, { t: n + " detector", p: "A building-sized camera wrapped around a collision point. Together the detectors see up to about a billion collisions per second: far more than can ever be stored.", tags: ["Velocity", "Volume", "Variety"] });
+  label(n, "#d97706", 0.75, V(p.x, r * 2 + 1, p.z));
+  return { p: V(p.x, r * 0.9, p.z), m: m0, flash: 0 };
+});
+const bunches = [];
+for (let i = 0; i < 14; i++) { const d = i < 7 ? 1 : -1; const s = new THREE.Mesh(new THREE.SphereGeometry(0.2, 10, 10), new THREE.MeshBasicMaterial({ color: d > 0 ? 0x38bdf8 : 0xf472b6 })); scene.add(s); bunches.push({ s, a: (i % 7) / 7 * Math.PI * 2, d }); }
+const SENS = [];
+for (let i = 0; i < 14; i++) {
+  const a = (i + 0.5) / 14 * Math.PI * 2, p = ringPos(a, R + 1.5);
+  const m = add(new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.9, 0.45), mat(COL.pink)), p.x, 0.45, p.z);
+  clickable(m, { t: "Accelerator sensor", p: "Magnets, beam monitors and cooling systems report time-stamped readings all day long. This second stream ends up in CERN's Hadoop-based logging service.", tags: ["Velocity", "Variety"] });
+  SENS.push(V(p.x, 0.9, p.z));
+}
+
+/* ---------- 02 FILTER: trigger gate + Kafka ---------- */
+const GATE = V(ST.filter, 2.6, -2);
+add(new THREE.Mesh(new THREE.BoxGeometry(0.5, 5.4, 0.5), mat(0x475569)), GATE.x, 2.7, GATE.z - 3);
+add(new THREE.Mesh(new THREE.BoxGeometry(0.5, 5.4, 0.5), mat(0x475569)), GATE.x, 2.7, GATE.z + 3);
+add(new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.5, 6.6), mat(0x475569)), GATE.x, 5.4, GATE.z);
+const sieveM = new THREE.MeshStandardMaterial({ color: COL.c2, transparent: true, opacity: 0.28, side: THREE.DoubleSide, emissive: COL.c2, emissiveIntensity: 0.1 });
+const sieve = add(new THREE.Mesh(new THREE.PlaneGeometry(5.5, 5), sieveM), GATE.x, 2.6, GATE.z, false);
+sieve.rotation.y = Math.PI / 2;
+const sieveGrid = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.PlaneGeometry(5.5, 5, 8, 7)), new THREE.LineBasicMaterial({ color: COL.c2 }));
+sieveGrid.position.copy(sieve.position); sieveGrid.rotation.y = Math.PI / 2; scene.add(sieveGrid);
+clickable(sieve, { t: "The trigger", p: "Decides in real time which collisions look interesting. Kept events turn green and move on; everything else is thrown away on the spot, because it's impossible to read out every collision.", tags: ["Velocity", "Veracity", "Real-time filtering"] });
+label("Trigger", "#16a34a", 0.85, V(GATE.x, 6.6, GATE.z));
+const KA = V(ST.filter - 3, 1.3, 7), KB = V(ST.filter + 3, 1.3, 7);
+const kafkaM = new THREE.MeshStandardMaterial({ color: 0xf9a8d4, transparent: true, opacity: 0.6, emissive: COL.pink, emissiveIntensity: 0.08 });
+const kafka = add(new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 6, 28, 1, true), kafkaM), ST.filter, 1.3, 7);
+kafka.rotation.z = Math.PI / 2;
+for (let i = -2; i <= 2; i++) { const r = add(new THREE.Mesh(new THREE.TorusGeometry(1.02, 0.07, 8, 32), mat(COL.pink)), ST.filter + i * 1.4, 1.3, 7); r.rotation.y = Math.PI / 2; }
+clickable(kafka, { t: "Kafka · the waiting line", p: "Sensor readings flow into Kafka, a message queue that soaks up bursts so nothing is lost before it reaches the Hadoop cluster.", tags: ["Velocity", "Streaming"] });
+label("Kafka", "#db2777", 0.8, V(ST.filter, 3.2, 7));
+
+/* ---------- 03 STORE: EOS, tape, Hadoop, HBase ---------- */
+const EOSm = [];
+for (let i = 0; i < 4; i++) for (let j = 0; j < 2; j++) {
+  const m0 = mat(0x2563eb, { emissive: 0x2563eb, emissiveIntensity: 0.05 }); EOSm.push(m0);
+  const m = add(new THREE.Mesh(new THREE.BoxGeometry(1.1, 2.6, 1.2), m0), ST.store - 3 + i * 1.5, 1.3, -4 + j * 1.7);
+  clickable(m, { t: "EOS storage", p: "Kept collisions are saved as files on EOS, CERN's disk storage: more than 7 billion files spread across many servers. It isn't HDFS, but it's the same idea: spread the data out.", tags: ["Volume", "Distributed storage"] });
+}
+const EOS = V(ST.store - 0.75, 3, -3.2);
+label("EOS · collision files", "#2563eb", 0.8, V(ST.store - 0.75, 4.2, -3.2));
+for (let i = 0; i < 3; i++) {
+  const m = add(new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.75, 0.5, 28), mat(0x64748b)), ST.store + 4.2, 0.8, -4.4 + i * 1.6);
+  m.rotation.z = Math.PI / 2;
+  clickable(m, { t: "Tape archive", p: "A long-term copy of the recorded data on tape: cheap, enormous, and slow. It keeps the petabytes safe.", tags: ["Volume"] });
+}
+label("Tape", "#64748b", 0.7, V(ST.store + 4.2, 2.4, -2.8));
+const HC = V(ST.store - 0.5, 0, 7);
+add(new THREE.Mesh(new THREE.BoxGeometry(9, 0.3, 6), mat(0xe0e7ff)), HC.x, 0.15, HC.z);
+const NN = add(new THREE.Mesh(new THREE.BoxGeometry(2, 0.8, 1.1), mat(0xf59e0b)), HC.x, 3.4, HC.z - 2.2);
+clickable(NN, { t: "NameNode", p: "The cluster's address book. It knows which server holds every block of every file and listens for each server's heartbeat.", tags: ["HDFS"] });
+label("NameNode", "#d97706", 0.65, V(HC.x, 4.5, HC.z - 2.2));
+const DN = [];
+[[-3, -0.8], [0, -0.8], [3, -0.8], [-3, 1.6], [0, 1.6], [3, 1.6]].forEach(([dx, dz], i) => {
+  const m0 = mat(COL.c3, { emissive: COL.c3, emissiveIntensity: 0.05 });
+  const m = add(new THREE.Mesh(new THREE.BoxGeometry(1.8, 1.6, 1.6), m0), HC.x + dx, 1.1, HC.z + dz);
+  const cont = [0, 1].map(k => {
+    const cm = mat(0xddd6fe, { emissive: COL.c5, emissiveIntensity: 0 });
+    const c = add(new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.35, 0.6), cm), m.position.x - 0.42 + k * 0.84, 2.1, m.position.z);
+    clickable(c, { t: "YARN container", p: "A slice of one server's CPU and memory, handed to a job by YARN's ResourceManager. It turns purple while a Spark job is using it.", tags: ["YARN", "Resource management"] });
+    return { cm, busy: 0 };
+  });
+  const node = { id: i + 1, m, m0, cont, alive: true };
+  clickable(m, { t: "HDFS server " + (i + 1), p: "Stores 128 MB blocks of log files. Every block is copied to 3 different servers, so one machine dying loses nothing.", tags: ["HDFS", "Fault tolerance"], node });
+  DN.push(node);
+});
+label("Hadoop cluster · logs", "#4f46e5", 0.8, V(HC.x, 0.4, HC.z + 3.9));
+const HB = V(ST.store + 6, 0, 7); const HBm = [];
+for (let i = 0; i < 6; i++) {
+  const m0 = mat(0x10b981, { emissive: 0x10b981, emissiveIntensity: 0.05 }); HBm.push(m0);
+  const m = add(new THREE.Mesh(new THREE.CylinderGeometry(0.95, 0.95, 0.38, 28), m0), HB.x, 0.3 + i * 0.48, HB.z);
+  clickable(m, { t: "HBase · NoSQL", p: "A columnar NoSQL store. Each reading is a row keyed by signal + time, so any time range can be read back fast. CERN's logging service uses it.", tags: ["NoSQL", "Velocity"] });
+}
+label("HBase", "#10b981", 0.7, V(HB.x, 4, HB.z));
+
+/* ---------- 04 PROCESS: grid globe ---------- */
+const G = V(ST.process, 4.2, 0), GR = 3.2;
+add(new THREE.Mesh(new THREE.CylinderGeometry(1.4, 2, 1, 32), mat(0xcbd5e1)), G.x, 0.5, G.z);
+add(new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 1.5, 12), mat(0x94a3b8)), G.x, 1.2, G.z);
+const globe = new THREE.Group(); globe.position.copy(G); scene.add(globe);
+const gSphere = new THREE.Mesh(new THREE.SphereGeometry(GR * 0.98, 40, 28), mat(0xe0f2fe)); gSphere.castShadow = true; globe.add(gSphere);
+globe.add(new THREE.Mesh(new THREE.SphereGeometry(GR, 20, 14), new THREE.MeshBasicMaterial({ color: 0x0369a1, wireframe: true, transparent: true, opacity: 0.25 })));
+const SITES = [];
+for (let i = 0; i < 44; i++) {
+  const u = Math.random() * 2 - 1, th = Math.random() * Math.PI * 2, s = Math.sqrt(1 - u * u);
+  const p = V(s * Math.cos(th), u, s * Math.sin(th)).multiplyScalar(GR * 1.01);
+  const d = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 8), new THREE.MeshBasicMaterial({ color: COL.c4 })); d.position.copy(p); globe.add(d); SITES.push(p);
+}
+clickable(gSphere, { t: "Worldwide LHC Computing Grid", p: "170+ computing sites in 42 countries, about 1.4 million cores, acting as one machine. Jobs are sent to the sites holding the data, run in parallel, and their results are merged: the MapReduce idea on a global scale.", tags: ["Distributed systems", "MapReduce idea", "Scale-out"] });
+label("Computing grid · 170+ sites", "#d97706", 0.8, V(G.x, G.y + GR + 1.2, G.z));
+const sitePos = i => SITES[i].clone().applyQuaternion(globe.quaternion).add(G);
+
+/* ---------- 05 DISCOVER: histogram board + Spark screen ---------- */
+const HBX = ST.discover, HBZ = -1.2, NB = 60, BW = 2, HW = 11;
+const board = add(new THREE.Mesh(new THREE.BoxGeometry(HW + 1.2, 7.4, 0.25), mat(0xffffff)), HBX, 3.9, HBZ - 0.3);
+add(new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.6, 0.3), mat(0x94a3b8)), HBX - 5.5, 0.3, HBZ - 0.3);
+add(new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.6, 0.3), mat(0x94a3b8)), HBX + 5.5, 0.3, HBZ - 0.3);
+clickable(board, { t: "The mass histogram", p: "Real collision data: 100,000 CMS dimuon events from CERN's open data. Each event is labelled with its mass bin (map), grouped (shuffle) and counted (reduce). Every peak is a real particle.", tags: ["MapReduce", "Value", "Visualization"] });
+const bins = new Array(NB).fill(0), bars = [];
+for (let i = 0; i < NB; i++) {
+  const c = new THREE.Color().lerpColors(new THREE.Color(COL.c1), new THREE.Color(COL.c5), i / NB);
+  const m = add(new THREE.Mesh(new THREE.BoxGeometry(HW / NB * 0.8, 1, 0.3), mat(c)), HBX - HW / 2 + (i + 0.5) * HW / NB, 0.9, HBZ);
+  m.scale.y = 0.02; bars.push(m);
+  clickable(m, { t: "Mass histogram", p: "Each bar counts real CMS collision events in a 2 GeV mass slice. Peaks reveal particles.", tags: ["Value"], bin: i });
+}
+label("Dimuon mass · real CMS data", "#7c3aed", 0.75, V(HBX, 8.2, HBZ));
+label("0 GeV", "#6b7280", 0.55, V(HBX - HW / 2, 0.35, HBZ + 0.8));
+label("120 GeV", "#6b7280", 0.55, V(HBX + HW / 2, 0.35, HBZ + 0.8));
+const PEAKS = [[1, "J/ψ"], [4, "Υ"], [45, "Z boson"]].map(([b, n]) => { const s = label(n, "#db2777", 0.62); s.visible = false; return { b, s }; });
+const SC = V(ST.discover, 2.2, 7);
+add(new THREE.Mesh(new THREE.BoxGeometry(5.4, 3.4, 0.25), mat(0x1f2a44)), SC.x, SC.y, SC.z);
+add(new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.6, 0.3), mat(0x94a3b8)), SC.x, 0.3, SC.z);
+const dc = document.createElement("canvas"); dc.width = 512; dc.height = 300;
+const dtex = new THREE.CanvasTexture(dc); dtex.colorSpace = THREE.SRGBColorSpace;
+const screen = add(new THREE.Mesh(new THREE.PlaneGeometry(5, 3), new THREE.MeshBasicMaterial({ map: dtex })), SC.x, SC.y, SC.z + 0.14, false);
+clickable(screen, { t: "Spark dashboard", p: "Spark jobs on the Hadoop cluster summarise the accelerator logs so operators can check the machine's health over any period.", tags: ["Spark", "Value"] });
+label("Spark · accelerator health", "#4f46e5", 0.65, V(SC.x, SC.y + 2.4, SC.z));
+const spark = new Array(36).fill(4);
+function drawScreen() {
+  const g = dc.getContext("2d"); g.fillStyle = "#1f2a44"; g.fillRect(0, 0, 512, 300);
+  g.strokeStyle = "rgba(255,255,255,.12)"; for (let i = 1; i < 5; i++) { g.beginPath(); g.moveTo(20, i * 60); g.lineTo(492, i * 60); g.stroke(); }
+  const mx = Math.max(1, ...spark); g.strokeStyle = "#f472b6"; g.lineWidth = 5; g.beginPath();
+  spark.forEach((v, i) => { const x = 24 + i * 13, y = 270 - v / mx * 210; i ? g.lineTo(x, y) : g.moveTo(x, y); }); g.stroke();
+  dtex.needsUpdate = true;
+}
+drawScreen();
+
+/* ---------- particles ---------- */
+function dot() { const c = document.createElement("canvas"); c.width = c.height = 64; const g = c.getContext("2d"); const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, "rgba(255,255,255,1)"); gr.addColorStop(0.55, "rgba(255,255,255,1)"); gr.addColorStop(1, "rgba(255,255,255,0)"); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(c); }
+const DOT = dot(), PAPER = new THREE.Color(0xf3f1ea);
+class Swarm {
+  constructor(max, px) {
+    this.px = px; this.list = []; this.max = max; this.pos = new Float32Array(max * 3); this.col = new Float32Array(max * 3);
+    const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.BufferAttribute(this.pos, 3)); g.setAttribute("color", new THREE.BufferAttribute(this.col, 3)); this.g = g;
+    this.m = new THREE.PointsMaterial({ size: px, map: DOT, vertexColors: true, transparent: true, depthWrite: false, alphaTest: 0.2 });
+    this.pts = new THREE.Points(g, this.m); this.pts.frustumCulled = false; this.pts.renderOrder = 5; scene.add(this.pts);
+  }
+  add(p) { if (this.list.length < this.max) this.list.push(p); return p; }
+  update(dt) {
+    const keep = []; let n = 0; const tmp = new THREE.Color();
+    for (let i = 0; i < this.list.length; i++) {
+      const p = this.list[i];
+      if (p.kind === "burst") { p.v.applyAxisAngle(Y, p.curl * dt); p.pos.addScaledVector(p.v, dt); p.v.y -= dt * 2; p.v.multiplyScalar(1 - dt); p.life -= dt; }
+      else { p.t += dt * p.speed / p.len; if (p.t >= 1) { p.curve.getPoint(1, p.pos); if (p.onArrive) p.onArrive(p); continue; } p.curve.getPoint(p.t, p.pos); }
+      if (p.life <= 0) continue; keep.push(p);
+      tmp.copy(p.c); if (p.kind === "burst") tmp.lerp(PAPER, 1 - Math.max(0, p.life / p.max));
+      this.pos[n * 3] = p.pos.x; this.pos[n * 3 + 1] = p.pos.y; this.pos[n * 3 + 2] = p.pos.z;
+      this.col[n * 3] = tmp.r; this.col[n * 3 + 1] = tmp.g; this.col[n * 3 + 2] = tmp.b; n++;
+    }
+    this.list = keep; this.g.setDrawRange(0, n); this.g.attributes.position.needsUpdate = true; this.g.attributes.color.needsUpdate = true;
+    this.m.size = this.px * Math.min(2.2, Math.max(0.7, camera.zoom));
+  }
+}
+const FX = new Swarm(4000, 5), PK = new Swarm(1200, 12);
+function burst(pos, colors, n, sp, life, curl = 0) {
+  for (let i = 0; i < n; i++) {
+    const v = V(Math.random() * 2 - 1, Math.random() * 1.2, Math.random() * 2 - 1).normalize().multiplyScalar(sp * (0.5 + Math.random()));
+    FX.add({ kind: "burst", pos: pos.clone(), v, life, max: life, c: new THREE.Color(colors[i % colors.length]), curl: curl * (Math.random() < 0.5 ? -1 : 1) });
+  }
+}
+function send(sw, pts, color, speed, onArrive) {
+  const curve = new THREE.CatmullRomCurve3(pts);
+  return sw.add({ kind: "path", curve, len: Math.max(0.01, curve.getLength()), t: 0, speed, c: new THREE.Color(color), pos: pts[0].clone(), life: 1, onArrive });
+}
+const arc = (a, b, h) => [a, V((a.x + b.x) / 2, Math.max(a.y, b.y) + h, (a.z + b.z) / 2), b];
+
+/* ---------- simulation ---------- */
+const S = { coll: 0, kept: 0, drop: 0, stored: 0, grid: 0, kafka: 0, hdfs: 0, rep: 0, hbase: 0, analysed: 0 };
+let keepN = 6, mi = 0, kq = 0;
+const MASSES = window.MASSES || [];
+const BATCH = 400;
+function collide() {
+  const d = DET[Math.floor(Math.random() * DET.length)]; d.flash = 1; S.coll++;
+  burst(d.p, [COL.c1, 0xf59e0b, COL.pink, 0x38bdf8], 22, 4.5, 0.9, 2.5);
+  const g = V(GATE.x - 0.4, 1.2 + Math.random() * 3, GATE.z + (Math.random() - 0.5) * 4);
+  send(PK, [d.p.clone(), V((d.p.x + g.x) / 2, 4.5, (d.p.z + g.z) / 2 - 1), g], COL.c1, 10, p => {
+    if (Math.random() < 1 / keepN) {
+      S.kept++; sieveM.emissiveIntensity = 0.6;
+      send(PK, arc(p.pos.clone(), EOS.clone(), 3), COL.c2, 9, () => { S.stored++; EOSm.forEach(m => m.emissiveIntensity = 0.6); if (S.stored % 2 === 0) gridJob(); });
+    } else { S.drop++; burst(p.pos, [COL.red], 7, 1.6, 0.7); }
+  });
+}
+function gridJob() {
+  let cur = Math.floor(Math.random() * SITES.length);
+  send(PK, arc(EOS.clone(), sitePos(cur), 4), COL.c4, 9, () => {
+    S.grid++; let hops = 2;
+    const hop = () => {
+      const nx = Math.floor(Math.random() * SITES.length), a = sitePos(cur), b = sitePos(nx);
+      const mid = a.clone().add(b).multiplyScalar(0.5).sub(G).normalize().multiplyScalar(GR * 1.6).add(G);
+      send(PK, [a, mid, b], COL.c4, 8, () => {
+        cur = nx;
+        if (--hops > 0) return hop();
+        let first = -1;
+        for (let k = 0; k < BATCH && MASSES.length; k++) { const m = MASSES[mi]; mi = (mi + 1) % MASSES.length; const bi = Math.floor(m / BW); if (bi >= 0 && bi < NB) { bins[bi]++; if (first < 0) first = bi; } }
+        const bar = bars[Math.max(0, first)];
+        send(PK, arc(b, bar.position.clone().setY(1 + bar.scale.y), 3), COL.c5, 9, () => { if (MASSES.length) S.analysed += BATCH; refreshBars(); });
+      });
+    };
+    hop();
+  });
+}
+function refreshBars() {
+  if (S.analysed >= 100000) { S.analysed = 0; bins.fill(0); mi = 0; }
+  const mx = Math.max(1, ...bins), L = Math.log10(mx + 1);
+  bins.forEach((v, i) => { const h = Math.max(0.02, Math.log10(v + 1) / L * 5.6); bars[i].scale.y = h; bars[i].position.y = 0.9 + h / 2; });
+  PEAKS.forEach((pk, k) => { pk.s.visible = S.analysed > 6000; pk.s.position.set(bars[pk.b].position.x + (k === 0 ? -0.7 : k === 1 ? 0.7 : 0), 0.9 + bars[pk.b].scale.y + (k === 1 ? 1.5 : 0.7), HBZ + 0.4); });
+}
+function sensor() {
+  const s = SENS[Math.floor(Math.random() * SENS.length)];
+  send(PK, [s.clone(), V((s.x + KA.x) / 2, 3.5, (s.z + KA.z) / 2 + 1), KA.clone()], COL.pink, 9, () => { S.kafka++; kq++; kafkaM.emissiveIntensity = 0.5; });
+}
+function flushKafka() {
+  if (!kq) return; kq = 0;
+  const alive = DN.filter(n => n.alive); if (!alive.length) return;
+  const n = alive[Math.floor(Math.random() * alive.length)];
+  send(PK, arc(KB.clone(), n.m.position.clone().setY(2), 2.5), COL.pink, 9, () => {
+    S.hdfs++; n.m0.emissiveIntensity = 0.7;
+    alive.filter(o => o !== n && o.alive).sort(() => Math.random() - 0.5).slice(0, 2).forEach(o =>
+      send(FX, arc(n.m.position.clone().setY(2), o.m.position.clone().setY(2), 1.5), COL.c3, 6, () => { S.rep++; o.m0.emissiveIntensity = 0.6; }));
+    if (Math.random() < 0.5) send(PK, arc(n.m.position.clone().setY(2), V(HB.x, 3, HB.z), 2), 0x10b981, 8, () => { S.hbase++; HBm.forEach(m => m.emissiveIntensity = 0.6); });
+    if (S.hdfs % 3 === 0) {
+      const free = DN.filter(d => d.alive).flatMap(d => d.cont).filter(c => !c.busy);
+      if (free.length) free[Math.floor(Math.random() * free.length)].busy = 3.4;
+      send(PK, arc(n.m.position.clone().setY(2), V(SC.x, SC.y, SC.z + 0.3), 4), COL.c4, 9, () => { spark.push(3 + Math.random() * 8 + (S.hdfs % 5)); spark.shift(); drawScreen(); });
+    }
+  });
+}
+function toggleNode(node) {
+  node.alive = !node.alive;
+  node.m0.color.set(node.alive ? COL.c3 : COL.red); node.m0.emissive.set(node.alive ? COL.c3 : COL.red);
+  node.cont.forEach(c => c.busy = 0);
+  if (!node.alive) {
+    const alive = DN.filter(n => n.alive);
+    for (let k = 0; k < 4 && alive.length > 1; k++) {
+      const a = alive[k % alive.length], b = alive[(k + 2) % alive.length]; if (a === b) continue;
+      setTimeout(() => send(PK, arc(a.m.position.clone().setY(2), b.m.position.clone().setY(2), 2.5), COL.red, 6, () => { S.rep++; b.m0.emissiveIntensity = 0.8; }), 300 + k * 350);
+    }
+  }
+}
+
+/* ---------- chapters (story card + timeline) ---------- */
+const CH = [
+  { key: "overview", n: "00", name: "Overview", short: "the whole journey", color: "#1f2a44", tgt: [4, 0, 2.5], zoom: 0,
+    title: "The journey of a collision",
+    body: "CERN's data travels left to right through five stops. Two streams run side by side: <b style='color:#0284c7'>blue</b> collision events from the detectors, and <b style='color:#db2777'>pink</b> readings from accelerator sensors.",
+    tags: ["5 Vs", "Distributed systems", "Hadoop", "NoSQL"], tryit: "Press <b>Guide me</b>, or pick a chapter below. Drag to rotate, scroll to zoom, click anything.",
+    stats: () => [["Collisions so far", fmt(S.coll)], ["Real events analysed", fmt(S.analysed)]] },
+  { key: "collect", n: "01", name: "Collect", short: "LHC · detectors · sensors", color: "#0284c7", tgt: [ST.collect, 1, 1.5], zoom: 1.55,
+    title: "Protons collide, detectors record",
+    body: "Proton bunches circle the 27 km ring in opposite directions and smash together inside four detectors: ATLAS, CMS, ALICE and LHCb. Sensors around the ring report on the machine itself.",
+    tags: ["Volume", "Velocity", "Variety"], tryit: "Click a <b>detector</b> or a pink <b>sensor</b>.",
+    real: [["Collisions / second", "up to ~1 billion"], ["Data in Run 2", "~1 PB per day"]],
+    stats: () => [["Collisions shown", fmt(S.coll)], ["Sensor readings", fmt(S.kafka)]] },
+  { key: "filter", n: "02", name: "Filter", short: "trigger · Kafka", color: "#16a34a", tgt: [ST.filter, 1.5, 2.5], zoom: 1.7,
+    title: "Keep the interesting, drop the rest",
+    body: "Far more collisions happen than could ever be saved. The trigger judges each one instantly: green moves on, red is thrown away. Sensor readings line up in Kafka so bursts don't overwhelm anything.",
+    tags: ["Velocity", "Veracity", "Real-time filtering", "Streaming"], tryit: "Change how strict the trigger is:", slider: true,
+    stats: () => [["Kept", fmt(S.kept)], ["Thrown away", fmt(S.drop)], ["Kafka messages", fmt(S.kafka)], ["Keep rate", (100 * S.kept / Math.max(1, S.kept + S.drop)).toFixed(0) + "%"]] },
+  { key: "store", n: "03", name: "Store", short: "EOS · HDFS · YARN · HBase", color: "#4f46e5", tgt: [ST.store + 0.5, 1.5, 2], zoom: 1.45,
+    title: "Two kinds of storage",
+    body: "Kept collisions become files on <b>EOS</b> (plus tape). Accelerator logs go to the <b>Hadoop cluster</b>: HDFS copies each block to 3 servers, <b>HBase</b> (NoSQL) stores readings by signal and time, and <b>YARN</b> hands CPU and memory to jobs. This replaced an older Oracle database that hit its limits.",
+    tags: ["HDFS", "YARN", "HBase · NoSQL", "RDBMS → Hadoop"], tryit: "Click an <b>HDFS server</b> to switch it off. Watch the red copies rebuild its blocks elsewhere.",
+    real: [["Files in EOS", "7 billion+"], ["HDFS copies per block", "3"]],
+    stats: () => [["Events stored", fmt(S.stored)], ["HDFS blocks", fmt(S.hdfs) + " (+" + fmt(S.rep) + ")"], ["HBase writes", fmt(S.hbase)], ["YARN busy", DN.flatMap(d => d.cont).filter(c => c.busy > 0).length + " / 12"]] },
+  { key: "process", n: "04", name: "Process", short: "the computing grid", color: "#d97706", tgt: [ST.process, 3, 0.5], zoom: 1.8,
+    title: "Send the work to the data",
+    body: "Stored events are analysed on the Worldwide LHC Computing Grid. Each job runs at the sites that hold its data, many run at once, and the results are merged. Split, process, merge: the MapReduce idea.",
+    tags: ["Distributed systems", "MapReduce idea", "Scale-out"], tryit: "Click the <b>globe</b> to see what the grid is.",
+    real: [["Grid sites", "170+ in 42 countries"], ["CPU cores", "~1.4 million"]],
+    stats: () => [["Grid jobs run", fmt(S.grid)], ["Events stored", fmt(S.stored)]] },
+  { key: "discover", n: "05", name: "Discover", short: "histogram · dashboards", color: "#7c3aed", tgt: [ST.discover, 2.5, 2.5], zoom: 1.45,
+    title: "Peaks become particles",
+    body: "Each finished job adds a batch of <b>real CMS collision events</b> to the mass histogram. As it fills, peaks rise out of the background: J/ψ, Υ and the Z boson. That's the Value of all this data. Spark dashboards show the accelerator's health.",
+    tags: ["Value", "Visualization", "MapReduce"], tryit: "Click a <b>bar</b> to see how many events it holds.",
+    stats: () => [["Real events analysed", fmt(S.analysed) + " / 100,000"], ["Grid jobs run", fmt(S.grid)]] }
+];
+let chap = 0, tween = null;
+const story = $("#story"), tl = $("#timeline");
+CH.slice(1).forEach((c, i) => {
+  const b = document.createElement("button"); b.className = "ch"; b.style.setProperty("--cc", c.color);
+  b.innerHTML = `<span class="n">${c.n}</span><span class="t">${c.name}</span><span class="s">${c.short}</span><span class="bar"></span>`;
+  b.onclick = () => { stopGuide(); go(i + 1); }; tl.appendChild(b);
+});
+const cardPx = () => innerWidth > 900 ? story.offsetWidth + 24 : 0;
+function overviewZoom() { const w = host.clientWidth, a = w / host.clientHeight; return Math.min(1.25, F * a * ((w - cardPx() - 30) / w) / 64); }
+function framed(tgt, zoom) { const w = host.clientWidth, a = w / host.clientHeight; return tgt.clone().add(V(cardPx() / 2 * (F * a / zoom) / w, 0, 0)); }
+function go(i) {
+  chap = i; const c = CH[i];
+  [...tl.children].forEach((b, k) => { b.classList.toggle("on", k === i - 1); b.classList.remove("run"); });
+  story.style.setProperty("--cc", c.color);
+  story.innerHTML = `<div class="num">CHAPTER ${c.n}</div><h2>${c.title}</h2><p>${c.body}</p>
+    <h4>Big Data concepts here</h4><div class="tags">${c.tags.map(t => `<span>${t}</span>`).join("")}</div>
+    ${c.real ? `<h4>CERN's real numbers</h4><div class="stats">${c.real.map(r => `<div class="real"><b>${r[1]}</b><span>${r[0]}</span></div>`).join("")}</div>` : ""}
+    <h4>In this simulation</h4><div class="stats" id="sim"></div>
+    <div class="try"><b>Try it:</b> ${c.tryit}${c.slider ? `<input type="range" id="trg" min="2" max="30" value="${keepN}"><div class="note">Keeps 1 in <b id="trgT">${keepN}</b> collisions (illustrative; the real trigger is far stricter).</div>` : ""}</div>`;
+  if (c.slider) $("#trg").oninput = e => { keepN = +e.target.value; $("#trgT").textContent = keepN; };
+  renderSim();
+  const asp = host.clientWidth / host.clientHeight, z = c.zoom ? c.zoom * Math.min(1, asp / 1.6) : overviewZoom(), tgt = framed(V(...c.tgt), z);
+  tween = { p0: camera.position.clone(), t0: controls.target.clone(), z0: camera.zoom, t1: tgt, p1: tgt.clone().add(OFF), z1: z, k: 0 };
+  $("#pop").style.display = "none";
+}
+function renderSim() { const el = $("#sim"); if (el) el.innerHTML = CH[chap].stats().map(r => `<div><b>${r[1]}</b><span>${r[0]}</span></div>`).join(""); }
+let guideT = null;
+function stopGuide() { if (guideT) { clearTimeout(guideT); guideT = null; } $("#guide").textContent = "▶ Guide me"; [...tl.children].forEach(b => b.classList.remove("run")); }
+function guideStep(i) {
+  go(i);
+  const b = tl.children[i - 1]; if (b) { void b.offsetWidth; b.classList.add("run"); }
+  guideT = setTimeout(() => { if (i >= CH.length - 1) { stopGuide(); go(0); } else guideStep(i + 1); }, 8500);
+}
+$("#guide").onclick = () => { if (guideT) { stopGuide(); return; } $("#guide").textContent = "■ Stop guide"; guideStep(1); };
+let paused = false;
+$("#pause").onclick = e => { paused = !paused; e.target.textContent = paused ? "Play" : "Pause"; };
+$("#lbl").onclick = e => { labels.visible = !labels.visible; e.target.textContent = labels.visible ? "Hide labels" : "Show labels"; };
+
+/* ---------- clicking things ---------- */
+const pop = $("#pop"), ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+function hitAt(ev) {
+  const r = renderer.domElement.getBoundingClientRect();
+  ndc.set((ev.clientX - r.left) / r.width * 2 - 1, -(ev.clientY - r.top) / r.height * 2 + 1);
+  ray.setFromCamera(ndc, camera); const h = ray.intersectObjects(pick, false)[0];
+  return h && h.object.userData.info;
+}
+function showPop(info, ev) {
+  if (info.node) toggleNode(info.node);
+  const st = info.node ? `<div class="st" style="color:${info.node.alive ? "#16a34a" : "#dc2626"}">${info.node.alive ? "● Running. Click again to switch it off." : "✖ Switched off. Its blocks are being copied to other servers. Click again to restore it."}</div>`
+    : info.bin !== undefined ? `<div class="st" style="color:#7c3aed">${info.bin * BW}–${info.bin * BW + BW} GeV: ${fmt(bins[info.bin])} events so far</div>` : "";
+  pop.innerHTML = `<button class="x" aria-label="Close">×</button><h3>${info.t}</h3><p>${info.p}</p><div class="tags" style="--cc:#4f46e5;margin-top:8px">${info.tags.map(t => `<span>${t}</span>`).join("")}</div>${st}`;
+  pop.style.display = "block";
+  pop.style.left = Math.max(10, Math.min(innerWidth - 316, ev.clientX + 14)) + "px";
+  pop.style.top = Math.max(10, Math.min(innerHeight - pop.offsetHeight - 10, ev.clientY - 20)) + "px";
+  pop.querySelector(".x").onclick = () => pop.style.display = "none";
+}
+let down = null, lastMove = 0;
+renderer.domElement.addEventListener("pointerdown", e => { down = [e.clientX, e.clientY]; tween = null; });
+renderer.domElement.addEventListener("pointerup", e => { if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 5) return; const info = hitAt(e); if (info) showPop(info, e); else pop.style.display = "none"; });
+renderer.domElement.addEventListener("pointermove", e => { const t = performance.now(); if (t - lastMove < 90) return; lastMove = t; renderer.domElement.style.cursor = hitAt(e) ? "pointer" : "grab"; });
+
+/* ---------- loop ---------- */
+const clock = new THREE.Clock(); let aC = 0, aS = 0, aK = 0, aU = 0;
+const ease = k => k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
+function step(dt) {
+  aC += dt; aS += dt; aK += dt;
+  while (aC > 0.3) { aC -= 0.3; collide(); }
+  while (aS > 0.24) { aS -= 0.24; sensor(); }
+  while (aK > 0.9) { aK -= 0.9; flushKafka(); }
+  bunches.forEach(b => { b.a += b.d * dt * 1.5; b.s.position.copy(ringPos(b.a)); });
+  globe.rotation.y += dt * 0.18;
+  DET.forEach(d => { d.flash = Math.max(0, d.flash - dt * 3); d.m.emissiveIntensity = 0.05 + d.flash * 0.6; });
+  const relax = (m, base, k = 3) => { m.emissiveIntensity += (base - m.emissiveIntensity) * Math.min(1, dt * k); };
+  relax(sieveM, 0.1, 4); relax(kafkaM, 0.08); EOSm.forEach(m => relax(m, 0.05)); HBm.forEach(m => relax(m, 0.05));
+  DN.forEach(n => { if (n.alive) relax(n.m0, 0.05); else n.m0.emissiveIntensity = 0.3 + 0.3 * Math.sin(performance.now() / 160); n.cont.forEach(c => { c.busy = Math.max(0, c.busy - dt); c.cm.emissiveIntensity = c.busy > 0 ? 0.9 : 0; c.cm.color.set(c.busy > 0 ? COL.c5 : 0xddd6fe); }); });
+  FX.update(dt); PK.update(dt);
+}
+function frame() {
+  const real = Math.min(0.05, clock.getDelta());
+  if (tween) {
+    tween.k = Math.min(1, tween.k + real / 1.5); const e = ease(tween.k);
+    controls.target.lerpVectors(tween.t0, tween.t1, e); camera.position.lerpVectors(tween.p0, tween.p1, e);
+    camera.zoom = tween.z0 + (tween.z1 - tween.z0) * e; camera.updateProjectionMatrix(); if (tween.k >= 1) tween = null;
+  }
+  controls.update();
+  if (!paused) step(real);
+  aU += real; if (aU > 0.25) { aU = 0; renderSim(); }
+  renderer.render(scene, camera); requestAnimationFrame(frame);
+}
+refreshBars(); go(0); { const z = overviewZoom(), t0 = framed(V(...CH[0].tgt), z); camera.zoom = z; controls.target.copy(t0); camera.position.copy(t0).add(OFF); camera.updateProjectionMatrix(); } tween = null; frame();
+window.__journey = { S, go, advance: s => { for (let t = 0; t < s; t += 0.04) step(0.04); refreshBars(); renderSim(); } };
+</script>
+</body>
+</html>
