@@ -342,7 +342,8 @@ function drawC1() {
 }
 // 3 particle table
 const ptb = $("#ptb");
-const prow = PART.map(([n]) => { const tr = document.createElement("tr"); tr.innerHTML = `<td><b>${n}</b></td><td class="n">0</td><td class="n">–</td><td><div class="sbar"><div></div></div></td><td><span class="st wait">waiting</span></td>`; ptb.appendChild(tr); return tr; });
+const PNAME = { "ω": "omega", "φ": "phi", "J/ψ": "J-psi", "ψ(2S)": "psi-2S (heavier J-psi)", "Υ(1S)": "Upsilon-1S", "Υ(2S)": "Upsilon-2S", "Υ(3S)": "Upsilon-3S", "Z boson": "Z boson" };
+const prow = PART.map(([n]) => { const tr = document.createElement("tr"); tr.innerHTML = `<td><b>${n}</b>${PNAME[n] !== n ? `<div style="font-size:12px;color:var(--ink2)">${PNAME[n]}</div>` : ""}</td><td class="n">0</td><td class="n">–</td><td><div class="sbar"><div></div></div></td><td><span class="st wait">waiting</span></td>`; ptb.appendChild(tr); return tr; });
 function sig(k) { const s = S.pin[k] - S.pbg[k], b = S.pbg[k]; return [s, b > 0 ? s / Math.sqrt(b) : 0]; }
 function drawTable() {
   PART.forEach((p, k) => { const [s, z] = sig(k), tds = prow[k].children;
