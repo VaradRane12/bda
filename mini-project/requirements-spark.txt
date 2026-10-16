@@ -1,0 +1,7 @@
+# Full project: Spark analysis notebook + data download + dashboard
+-r requirements.txt
+pyspark==3.5.3
+pyarrow
+requests
+matplotlib
+jupyter

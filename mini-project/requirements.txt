@@ -1,8 +1,4 @@
-pyspark==3.5.3
-pandas
-pyarrow
-requests
+# Dashboard only (this is what Streamlit Cloud installs)
 streamlit
+pandas
 plotly
-matplotlib
-jupyter

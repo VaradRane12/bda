@@ -34,7 +34,7 @@ The default is **3 days = 72 files ≈ 4.2 GB ≈ 470 million rows**.
 ```bash
 # 1. setup (Python 3.11 + Java 17)
 python3.11 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
+pip install -r requirements-spark.txt
 
 # 2. download data (~4.2 GB, ~7 minutes from the mirror)
 python download_data.py                         # or: --start 2026-09-25 --days 7
@@ -49,6 +49,12 @@ jupyter notebook analysis.ipynb
 streamlit run app.py
 ```
 
+## Deploy the dashboard (Streamlit Community Cloud)
+
+On [share.streamlit.io](https://share.streamlit.io) → **Create app** → repo `VaradRane12/bda`, branch `mini-project`,
+main file `mini-project/app.py`. It only installs `requirements.txt` (Streamlit, Pandas, Plotly). Spark isn't needed,
+because the dashboard reads the precomputed `results/` folder.
+
 ## Project structure
 
 ```
@@ -56,6 +62,8 @@ download_data.py   Step 1: download hourly files from Wikimedia
 hdfs_upload.sh     Optional: copy raw data into HDFS
 analysis.ipynb     Step 2: all Spark processing (load → clean → Parquet → SQL + RDD → results/)
 app.py             Step 3: Streamlit dashboard reading results/
+requirements.txt        dashboard dependencies (used by Streamlit Cloud)
+requirements-spark.txt  everything, incl. PySpark + Jupyter
 results/           Small CSV/JSON outputs from Spark (what the dashboard shows)
 data/raw/          Downloaded .gz files      (not committed)
 data/clean/        Cleaned Parquet data      (not committed)

@@ -5,6 +5,7 @@ Run:  streamlit run app.py
 """
 
 import json
+from pathlib import Path
 
 import pandas as pd
 import plotly.express as px
@@ -15,16 +16,16 @@ st.set_page_config(page_title="Wikipedia Trends", page_icon="📈", layout="wide
 
 @st.cache_data
 def load():
-    r = "results/"
+    r = Path(__file__).parent / "results"   # works no matter which folder we run from
     return {
-        "summary": json.load(open(r + "summary.json")),
-        "top_pages": pd.read_csv(r + "top_pages.csv"),
-        "hourly": pd.read_csv(r + "hourly_traffic.csv", parse_dates=["hour"]),
-        "device": pd.read_csv(r + "device_split.csv"),
-        "trending": pd.read_csv(r + "trending.csv", parse_dates=["peak_hour"]),
-        "heatmap": pd.read_csv(r + "heatmap.csv"),
-        "words": pd.read_csv(r + "top_words.csv"),
-        "page_hourly": pd.read_csv(r + "page_hourly.csv", parse_dates=["hour"]),
+        "summary": json.load(open(r / "summary.json")),
+        "top_pages": pd.read_csv(r / "top_pages.csv"),
+        "hourly": pd.read_csv(r / "hourly_traffic.csv", parse_dates=["hour"]),
+        "device": pd.read_csv(r / "device_split.csv"),
+        "trending": pd.read_csv(r / "trending.csv", parse_dates=["peak_hour"]),
+        "heatmap": pd.read_csv(r / "heatmap.csv"),
+        "words": pd.read_csv(r / "top_words.csv"),
+        "page_hourly": pd.read_csv(r / "page_hourly.csv", parse_dates=["hour"]),
     }
 
 
@@ -67,7 +68,7 @@ with tabs[0]:
     top = d["top_pages"].head(n)
     fig = px.bar(top.iloc[::-1], x="views", y="title", orientation="h", text_auto=".3s")
     fig.update_layout(height=30 * n + 100, yaxis_title=None, xaxis_title="Views")
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
 
 # ---------------- Trending ----------------
 with tabs[1]:
@@ -78,29 +79,29 @@ with tabs[1]:
     tr = d["trending"]
     st.dataframe(
         tr[["title", "spike_score", "peak_views", "avg_views", "peak_hour"]],
-        use_container_width=True, hide_index=True,
+        width="stretch", hide_index=True,
         column_config={"spike_score": st.column_config.ProgressColumn(
             "spike score", format="%.1fx", min_value=0, max_value=float(tr.spike_score.max()))},
     )
     pick = st.selectbox("See the spike for:", tr.title)
     one = d["page_hourly"].query("title == @pick").sort_values("hour")
     fig = px.area(one, x="hour", y="views", title=f"{pick}: views per hour")
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
 
 # ---------------- Traffic over time ----------------
 with tabs[2]:
     hourly = d["hourly"]
     fig = px.area(hourly, x="hour", y="views", color="device",
                   title="Views per hour, desktop vs mobile (UTC)")
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
 
     left, right = st.columns(2)
     fig = px.pie(d["device"], names="device", values="views", hole=0.55, title="Device share")
-    left.plotly_chart(fig, use_container_width=True)
+    left.plotly_chart(fig, width="stretch")
 
     by_hod = hourly.assign(hour_of_day=hourly.hour.dt.hour).groupby("hour_of_day", as_index=False).views.mean()
     fig = px.bar(by_hod, x="hour_of_day", y="views", title="Average views by hour of day (UTC)")
-    right.plotly_chart(fig, use_container_width=True)
+    right.plotly_chart(fig, width="stretch")
 
 # ---------------- Heatmap ----------------
 with tabs[3]:
@@ -110,7 +111,7 @@ with tabs[3]:
                     labels=dict(x="Hour of day (UTC)", y="", color="views"),
                     title="When are the top pages read?")
     fig.update_layout(height=600)
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
 
 # ---------------- Search ----------------
 with tabs[4]:
@@ -119,7 +120,7 @@ with tabs[4]:
     chosen = st.multiselect("Compare pages (top 300 + trending)", titles, default=titles[:3])
     if chosen:
         fig = px.line(ph[ph.title.isin(chosen)].sort_values("hour"), x="hour", y="views", color="title")
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
 
 # ---------------- Words ----------------
 with tabs[5]:
@@ -127,7 +128,7 @@ with tabs[5]:
     w = d["words"].head(25)
     fig = px.treemap(w, path=["word"], values="views", color="views", color_continuous_scale="Blues")
     fig.update_layout(height=550, margin=dict(t=10, l=0, r=0, b=0))
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
 
 # ---------------- How it works ----------------
 with tabs[6]:
