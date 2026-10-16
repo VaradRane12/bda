@@ -1,0 +1,12 @@
+{
+  "raw_rows": 467322549,
+  "clean_rows": 149044966,
+  "files": 72,
+  "raw_gb": 4.24,
+  "unique_pages": 10208605,
+  "total_views": 575918015,
+  "first_hour": "2026-09-28 00:00:00",
+  "last_hour": "2026-09-30 23:00:00",
+  "load_seconds": 21.4,
+  "cores": 10
+}
