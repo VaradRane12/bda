@@ -11,7 +11,7 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-st.set_page_config(page_title="Wikipedia Trends", page_icon="📈", layout="wide")
+st.set_page_config(page_title="Wikipedia Trends", layout="wide")
 
 
 @st.cache_data
@@ -46,7 +46,7 @@ def short(n):
 
 
 # ---------------- Header ----------------
-st.title("📈 What was the world curious about?")
+st.title("What was the world curious about?")
 st.caption(
     f"English Wikipedia pageviews · {s['first_hour'][:16]} → {s['last_hour'][:16]} UTC · "
     "processed with Apache Spark (PySpark)"
@@ -59,8 +59,8 @@ c3.metric("Hourly files", s["files"])
 c4.metric("Unique pages", short(s["unique_pages"]))
 c5.metric("Total views", short(s["total_views"]))
 
-tabs = st.tabs(["🏆 Top pages", "🔥 Trending", "⏱️ Traffic over time", "🗺️ Heatmap",
-                "🔎 Search a page", "🔤 Top words", "⚙️ How it works"])
+tabs = st.tabs(["Top pages", "Trending", "Traffic over time", "Heatmap",
+                "Search a page", "Top words", "How it works"])
 
 # ---------------- Top pages ----------------
 with tabs[0]:
