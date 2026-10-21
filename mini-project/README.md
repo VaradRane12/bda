@@ -11,7 +11,7 @@ BDA Lab Mini Project (BIT27PE10): Design and implement a Big Data Analytics appl
 | **Apache Spark (PySpark)** | Loading, cleaning and analyzing ~470M rows in parallel |
 | **Spark SQL** | Top pages, time-series, device split, trending/spike detection |
 | **RDDs + MapReduce** | Word count weighted by views (`flatMap` → `reduceByKey`) |
-| **HDFS** (optional) | Storing raw files: `hdfs_upload.sh` |
+| **HDFS** | Stores the raw files; Spark reads them from `hdfs://localhost:9000/wiki/raw` (`hdfs_upload.sh`) |
 | **Parquet** | Columnar storage for the cleaned data |
 | **Python visualization** | Time-series, heatmap, treemap with Streamlit + Plotly |
 
@@ -39,8 +39,10 @@ pip install -r requirements-spark.txt
 # 2. download data (~4.2 GB, ~7 minutes from the mirror)
 python download_data.py                         # or: --start 2026-09-25 --days 7
 
-# 3. (optional) put the data in HDFS
+# 3. put the data in HDFS (needs Hadoop running: start-dfs.sh)
 ./hdfs_upload.sh
+#    the notebook reads hdfs://localhost:9000/wiki/raw/*.gz
+#    (to read local files instead, change DATA_PATH in the notebook to data/raw/*.gz)
 
 # 4. run the Spark analysis: open and "Run All"
 jupyter notebook analysis.ipynb
@@ -59,13 +61,13 @@ because the dashboard reads the precomputed `results/` folder.
 
 ```
 download_data.py   Step 1: download hourly files from Wikimedia
-hdfs_upload.sh     Optional: copy raw data into HDFS
+hdfs_upload.sh     Step 1b: copy raw data into HDFS
 analysis.ipynb     Step 2: all Spark processing (load → clean → Parquet → SQL + RDD → results/)
 app.py             Step 3: Streamlit dashboard reading results/
 requirements.txt        dashboard dependencies (used by Streamlit Cloud)
 requirements-spark.txt  everything, incl. PySpark + Jupyter
 results/           Small CSV/JSON outputs from Spark (what the dashboard shows)
-data/raw/          Downloaded .gz files      (not committed)
+data/raw/          Downloaded .gz files before upload to HDFS (not committed)
 data/clean/        Cleaned Parquet data      (not committed)
 ```
 
